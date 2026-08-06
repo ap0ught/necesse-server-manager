@@ -113,6 +113,23 @@ function valueSpan(body: string): Span | null {
   return { key: m[2], line: -1, start, end };
 }
 
+/**
+ * Net `{` minus `}` on one line, counted only in the code before any `//`
+ * comment (a brace a comment mentions must not fake a block). This is what
+ * block depth is built from: `steamPublish = {` is +1 and its own `}` is -1,
+ * so the depth says which keys really sit at the top level of the file's block.
+ */
+function blockDelta(body: string): number {
+  const commentAt = body.indexOf("//");
+  const code = commentAt === -1 ? body : body.slice(0, commentAt);
+  let delta = 0;
+  for (let i = 0; i < code.length; i++) {
+    if (code[i] === "{") delta++;
+    else if (code[i] === "}") delta--;
+  }
+  return delta;
+}
+
 export class WorldSettingsFile {
   private constructor(
     /** Every source line, each still carrying its own line ending. */
@@ -131,6 +148,11 @@ export class WorldSettingsFile {
     const spans = new Map<string, Span>();
     let sawHeader = false;
     let inBlock = false;
+    // How deep nested blocks a line is. A mod's `mod.info` can carry a
+    // `steamPublish = { ... }` block whose own `id` is the workshop release id
+    // - distinct from the mod's real top-level `id` - so only the keys at
+    // depth zero are the file's keys. Nested ones are read past, not recorded.
+    let depth = 0;
     for (let i = 0; i < lines.length; i++) {
       const body = lines[i].replace(/\r?\n$/, "");
       if (!inBlock) {
@@ -140,24 +162,34 @@ export class WorldSettingsFile {
         }
         continue;
       }
-      if (CLOSE.test(body)) {
+      // Only a `}` closing the file's own block ends it. The `}` that closes a
+      // nested block simply drops a depth level instead.
+      if (depth === 0 && CLOSE.test(body)) {
         inBlock = false;
         continue;
       }
-      const span = valueSpan(body);
-      if (span === null) continue;
-      if (spans.has(span.key)) {
-        // Which one the game reads is not something this daemon can know, so
-        // it refuses to guess. Refusing to edit is recoverable; editing the
-        // wrong one of two lines is not.
-        throw new Error(
-          `${format.what} declares "${span.key}" more than once (lines ` +
-            `${(spans.get(span.key) as Span).line + 1} and ${i + 1}). Refusing to guess which ` +
-            `one the game reads.`,
-        );
+      const delta = blockDelta(body);
+      // A nested block's inner key is not the file's key: it would make a valid
+      // `id` look duplicated by a sibling `steamPublish.id`, and it is not a
+      // value an editor here is permitted to touch.
+      if (depth === 0 && delta === 0) {
+        const span = valueSpan(body);
+        if (span !== null) {
+          if (spans.has(span.key)) {
+            // Which one the game reads is not something this daemon can know,
+            // so it refuses to guess. Refusing to edit is recoverable; editing
+            // the wrong one of two lines is not.
+            throw new Error(
+              `${format.what} declares "${span.key}" more than once (lines ` +
+                `${(spans.get(span.key) as Span).line + 1} and ${i + 1}). Refusing to guess which ` +
+                `one the game reads.`,
+            );
+          }
+          span.line = i;
+          spans.set(span.key, span);
+        }
       }
-      span.line = i;
-      spans.set(span.key, span);
+      depth = Math.max(0, depth + delta);
     }
     if (!sawHeader) {
       throw new Error(
