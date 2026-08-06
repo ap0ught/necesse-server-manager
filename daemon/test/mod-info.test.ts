@@ -107,6 +107,34 @@ describe("parseModInfo", () => {
     const text = ["{", "\tid = a.b, // the id", "\tversion = 2.0,", "\tname = A B", "}"].join("\n");
     expect(parseModInfo(text, "x.jar")).toMatchObject({ id: "a.b", version: "2.0", name: "A B" });
   });
+
+  // A workshop-published mod.info carries a `steamPublish = { ... }` block whose
+  // nested `id` is the upload's *workshop* id, not the mod's own top-level id.
+  // Before the brace-depth fix this exact file was refused as a "duplicate id",
+  // which blocked installing the real Broadcast/Discord mod (workshop item
+  // 3611876448). Only the top-level id is the mod's identity.
+  it("reads the top-level id past a nested steamPublish block, ignoring its id", () => {
+    const text = [
+      "{",
+      "\tid = marko.broadcastmod,",
+      "\tname = Broadcast, Discord and WelcomeMsg Mod,",
+      "\tversion = 1.0.6,",
+      "\tgameVersion = 1.1.1,",
+      "\tauthor = GeniDoX,",
+      "\tclientside = false,",
+      "\tsteamPublish = {",
+      "\t\tid = 3611876448,",
+      "\t\tvisibility = public",
+      "\t}",
+      "}",
+    ].join("\n");
+    expect(parseModInfo(text, "BroadcastandDiscordMod.jar")).toMatchObject({
+      id: "marko.broadcastmod",
+      name: "Broadcast, Discord and WelcomeMsg Mod",
+      version: "1.0.6",
+      clientside: false,
+    });
+  });
 });
 
 describe("safeModId", () => {

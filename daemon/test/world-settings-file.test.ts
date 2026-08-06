@@ -61,6 +61,28 @@ describe("WorldSettingsFile round trip", () => {
     expect(file.get("rpgskillsWelcomeMessageShown")).toBe("1");
     expect(file.get("nothingLikeThis")).toBeUndefined();
   });
+
+  // A mod published to the Workshop carries a `steamPublish = { ... }` block
+  // whose nested `id` is the upload's *workshop* id - a different field from
+  // the mod's own top-level `id`. Reading the file flat would see that second
+  // id as a duplicate of the first and refuse the whole mod (issue #9). Only
+  // block-level keys are the file's keys; the nested block's are read past.
+  it("reads past a nested id sharing a top-level key's name", () => {
+    const nested = [
+      "WORLDSETTINGS = {",
+      "\tid = marko.broadcastmod,",
+      "\tversion = 1.0.6,",
+      "\tsteamPublish = {",
+      "\t\tid = 3611876448,",
+      "\t\tvisibility = public",
+      "\t}",
+      "}",
+    ].join("\n");
+    const file = WorldSettingsFile.parse(nested);
+    expect(file.keys()).toEqual(["id", "version"]);
+    expect(file.get("id")).toBe("marko.broadcastmod");
+    expect(file.text()).toBe(nested);
+  });
 });
 
 describe("WorldSettingsFile edits", () => {
