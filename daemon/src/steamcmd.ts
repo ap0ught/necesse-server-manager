@@ -20,7 +20,13 @@ export class SteamCmd {
   }
 
   buildWorkshopArgs(id: string): string[] {
+    // Without force_install_dir, steamcmd routes workshop downloads to its own
+    // root (on Linux that is the Steam client dir), while workshopItemDir() --
+    // and the install's rm + jar scan -- expect them under steamRoot. Pin the
+    // directory exactly like buildUpdateArgs() does, and before login.
     return [
+      "+force_install_dir",
+      this.steamRoot,
       "+login",
       "anonymous",
       "+workshop_download_item",
