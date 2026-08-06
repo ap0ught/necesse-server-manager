@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { SteamCmd } from "../src/steamcmd.js";
 import { makeFakeSpawn } from "./fixtures/fake-spawn.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const cfg = { ...DEFAULT_CONFIG, steamcmdExe: "C:\\Users\\testuser\\steam\\steamcmd.exe" };
 
@@ -15,8 +15,12 @@ beforeEach(() => {
 });
 
 describe("argument construction", () => {
-  it("downloads a workshop item anonymously for the workshop app id", () => {
-    expect(steam.buildWorkshopArgs("3731244177")).toEqual([
+  it("pins workshop downloads to the steam root with force_install_dir before login", () => {
+    const args = steam.buildWorkshopArgs("3731244177");
+    expect(args.indexOf("+force_install_dir")).toBeLessThan(args.indexOf("+login"));
+    expect(args).toEqual([
+      "+force_install_dir",
+      dirname(cfg.steamcmdExe),
       "+login",
       "anonymous",
       "+workshop_download_item",
@@ -43,7 +47,7 @@ describe("argument construction", () => {
 
   it("resolves the workshop content dir next to the steamcmd executable", () => {
     expect(steam.workshopItemDir("3731244177")).toBe(
-      join("C:\\Users\\testuser\\steam", "steamapps", "workshop", "content", "1169040", "3731244177"),
+      join(dirname(cfg.steamcmdExe), "steamapps", "workshop", "content", "1169040", "3731244177"),
     );
   });
 });
