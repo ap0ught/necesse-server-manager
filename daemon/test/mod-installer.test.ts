@@ -74,6 +74,7 @@ function fakeWorkshop(steam: string | null): SteamWorkshop {
       previewUrl: "",
       description: "",
       updatedAt: steam,
+      createdAt: null,
       fileSize: 0,
       subscriptions: 0,
     };
@@ -459,7 +460,7 @@ describe("updateAll gate", () => {
       throw new Error("fetch should not be called");
     }) as never);
     vi.spyOn(workshop, "getDetails").mockResolvedValue([
-      { id, title: id, previewUrl: "", description: "", updatedAt: AT, fileSize: 0, subscriptions: 0 },
+      { id, title: id, previewUrl: "", description: "", updatedAt: AT, createdAt: null, fileSize: 0, subscriptions: 0 },
     ]);
 
     installer = new ModInstaller(cfg, registry, steam, library, workshop);
@@ -523,6 +524,7 @@ describe("updateAll gate", () => {
       previewUrl: "",
       description: "",
       updatedAt,
+      createdAt: null,
       fileSize: 0,
       subscriptions: 0,
     });

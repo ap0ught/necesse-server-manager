@@ -174,6 +174,42 @@ describe("WorkshopSearch", () => {
     expect(screen.getByRole("button", { name: /install portable storage/i })).toBeEnabled();
   });
 
+  it("keeps Steam's order for the default relevance sort", async () => {
+    const first = { ...ultraStorage, id: "1", title: "Alpha", subscriptions: 1 };
+    const second = { ...ultraStorage, id: "2", title: "Zulu", subscriptions: 99999 };
+    setup({ search: vi.fn(async () => page([first, second], null, 1)) });
+    await runSearch("x");
+    await screen.findByText("Alpha");
+    // Steam's order, not subscription rank: relevance is the identity.
+    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Alpha");
+    expect(screen.getAllByRole("listitem")[1]).toHaveTextContent("Zulu");
+  });
+
+  it("sorts by installs descending when that sort is chosen", async () => {
+    const few = { ...ultraStorage, id: "1", title: "Few", subscriptions: 500 };
+    const many = { ...ultraStorage, id: "2", title: "Many", subscriptions: 50000 };
+    setup({ search: vi.fn(async () => page([few, many], null, 2)) });
+    await runSearch("x");
+    await screen.findByText("Many");
+    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Few");
+    await userEvent.selectOptions(screen.getByLabelText(/sort by/i), "installs");
+    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Many");
+  });
+
+  it("sorts by date created, leaving an unknown date last", async () => {
+    const old = { ...ultraStorage, id: "1", title: "Old", createdAt: "2020-01-01T00:00:00.000Z" };
+    const fresh = { ...ultraStorage, id: "2", title: "Fresh", createdAt: "2023-01-01T00:00:00.000Z" };
+    const unknown = { ...ultraStorage, id: "3", title: "Unknown", createdAt: null };
+    setup({ search: vi.fn(async () => page([old, fresh, unknown], null, 3)) });
+    await runSearch("x");
+    await screen.findByText("Fresh");
+    await userEvent.selectOptions(screen.getByLabelText(/sort by/i), "created");
+    const rows = screen.getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("Fresh");
+    expect(rows[1]).toHaveTextContent("Old");
+    expect(rows[2]).toHaveTextContent("Unknown");
+  });
+
   it("shows the daemon's blurb under the title, and nothing when there is none", async () => {
     setup();
     await runSearch("storage");

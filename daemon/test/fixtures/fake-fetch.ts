@@ -86,6 +86,7 @@ export function detailsBody(
     id: string;
     title?: string;
     timeUpdated?: number;
+    timeCreated?: number;
     result?: number;
     subscriptions?: number;
     previewUrl?: string;
@@ -104,6 +105,7 @@ export function detailsBody(
         description: i.description ?? "whatever",
         preview_url: i.previewUrl ?? `https://images.example/${i.id}.jpg`,
         time_updated: i.timeUpdated ?? 1_700_000_000,
+        time_created: i.timeCreated ?? 1_600_000_000,
         file_size: "12345",
         subscriptions: i.subscriptions ?? 7,
         banned: i.banned ?? false,

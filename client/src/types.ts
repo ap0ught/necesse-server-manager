@@ -343,9 +343,9 @@ export interface ModListResponse {
 
 /**
  * One usable Steam Workshop entry, flattened from whichever Steam endpoint
- * produced it. `updatedAt` is Steam's `time_updated` (unix seconds) as ISO, or
- * null when Steam sent none - never the epoch, so "unknown" cannot read as
- * "1970".
+ * produced it. `updatedAt` is Steam's `time_updated` (unix seconds) as ISO,
+ * and `createdAt` is `time_created` likewise; either is null when Steam sent
+ * none - never the epoch, so "unknown" cannot read as "1970".
  *
  * Entries Steam reports a non-1 `result` for, and entries flagged `banned`,
  * never become a WorkshopItem: neither can be downloaded, so there is no
@@ -365,6 +365,7 @@ export interface WorkshopItem {
    */
   description: string;
   updatedAt: string | null;
+  createdAt: string | null;
   fileSize: number;
   subscriptions: number;
 }
