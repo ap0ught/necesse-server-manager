@@ -13,10 +13,15 @@
  * source of truth and must stay unmodified.
  */
 // CSI: ESC [ params ; intermediate final — e.g. \x1b[0m, \x1b[32m, \x1b[?25h
-const ANSI_RE = /\u001b\[[0-9;<>?]*[ -/]*[@-~]/g;
+const CSI_RE = /\u001b\[[0-9;<>?]*[ -/]*[@-~]/g;
 // OSC: ESC ] ... terminated by BEL or ESC-backslash (title sequences)
 const OSC_RE = /\u001b\][^\u001b\u0007]*(?:\u0007|\u001b\\)/g;
+// 2-byte ESC sequences (DECSC, DECRC, DECKPAM, charset select, etc.):
+// ESC + intermediate (0x20-0x2F) or digit/symbol (0x30-0x3F).
+// Excludes CSI [ and OSC ] which are handled above.
+const ESC_2BYTE_RE = /\u001b[\x20-\x3f]/g;
 
 export function stripAnsi(line: string): string {
-  return line.replace(ANSI_RE, "").replace(OSC_RE, "").replace(/\u001b/g, "");
+  if (line.indexOf("\u001b") === -1) return line;
+  return line.replace(CSI_RE, "").replace(OSC_RE, "").replace(ESC_2BYTE_RE, "").replace(/\u001b/g, "");
 }

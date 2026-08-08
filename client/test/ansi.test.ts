@@ -30,6 +30,11 @@ describe("stripAnsi", () => {
     expect(stripAnsi("half\u001b")).toBe("half");
   });
 
+  it("removes 2-byte ESC sequences (ESC + one-byte command) so they don't leave garbage chars", () => {
+    expect(stripAnsi("\u001b7save cursor\u001b8restore")).toBe("save cursorrestore");
+    expect(stripAnsi("\u001b=Bold text\u001b>")).toBe("Bold text");
+  });
+
   it("leaves plain text untouched", () => {
     expect(stripAnsi("no escapes here")).toBe("no escapes here");
   });
