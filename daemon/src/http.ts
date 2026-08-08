@@ -1,8 +1,10 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
+import { join } from "node:path";
 import { AUTH_FAILURE_MESSAGE, presentedToken, tokenMatches } from "./auth.js";
 import { saveConfig } from "./config.js";
+import { readModInfo } from "./mod-info.js";
 import { listWorlds, worldExists, worldZipPath, isValidWorldName } from "./worlds.js";
 import { openWorldSettings, WorldSettingsError } from "./world-settings.js";
 import type { WorldSettingsFile } from "./world-settings-file.js";
@@ -26,6 +28,7 @@ import { workshopEntryUnchanged } from "./mod-updates.js";
 import type { ProcessManager } from "./process-manager.js";
 import type { SteamCmd } from "./steamcmd.js";
 import { WorkshopError, type SteamWorkshop } from "./steam-workshop.js";
+import { enableJar, listUnloaded, unloadJar } from "./mod-unloaded.js";
 import type {
   DaemonConfig,
   InstallResult,
@@ -39,6 +42,7 @@ import type {
   ReconcileSummary,
   StatusPayload,
   TaskKind,
+  UnloadedModsResponse,
   WorkshopItem,
   WorldModsResponse,
   WorldSettingField,
@@ -1163,6 +1167,45 @@ export function buildServer(deps: Deps): FastifyInstance {
    */
   app.get("/api/mods/library", async () => {
     return { ok: true, mods: await library.load() } satisfies ModLibraryResponse;
+  });
+
+  app.get("/api/mods/unloaded", async () => {
+    return { ok: true, mods: await listUnloaded(cfg.unloadedModsDir) } satisfies UnloadedModsResponse;
+  });
+
+  app.post("/api/mods/unloaded", async (req, reply) => {
+    const { jar } = (req.body ?? {}) as { jar?: string };
+    if (typeof jar !== "string" || jar.length === 0) {
+      return reply.code(400).send({ ok: false, error: "A jar filename is required." });
+    }
+    if (!requireNoActiveTask(reply, "unload a mod")) return reply;
+    const path = join(cfg.modsDir, jar);
+    let reason: string;
+    try {
+      const info = await readModInfo(path);
+      reason = `Manually unloaded. Installed as ${info.id}`;
+    } catch (e) {
+      reason = (e as Error).message;
+    }
+    try {
+      await unloadJar(jar, cfg.modsDir, cfg.unloadedModsDir, reason);
+      return { ok: true, jar } as const;
+    } catch (e) {
+      return reply.code(500).send({ ok: false, error: `Failed to move ${jar}: ${(e as Error).message}` });
+    }
+  });
+
+  app.post("/api/mods/unloaded/:jar/enable", async (req, reply) => {
+    const { jar } = req.params as { jar: string };
+    if (typeof jar !== "string" || jar.length === 0) {
+      return reply.code(400).send({ ok: false, error: "A jar filename is required." });
+    }
+    try {
+      await enableJar(jar, cfg.modsDir, cfg.unloadedModsDir);
+      return { ok: true, jar } as const;
+    } catch (e) {
+      return reply.code(500).send({ ok: false, error: `Failed to move back ${jar}: ${(e as Error).message}` });
+    }
   });
 
   /**

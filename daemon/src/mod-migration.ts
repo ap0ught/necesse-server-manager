@@ -4,6 +4,7 @@ import { NotAModJarError, readModInfo } from "./mod-info.js";
 import type { ModLibrary } from "./mod-library.js";
 import type { ModSets } from "./mod-sets.js";
 import type { ModRegistry } from "./mod-registry.js";
+import { unloadJar } from "./mod-unloaded.js";
 import { listWorlds } from "./worlds.js";
 import type { ModSource } from "./types.js";
 
@@ -49,6 +50,7 @@ export interface MigrationSummary {
 export interface MigrationOptions {
   modsDir: string;
   worldsDir: string;
+  unloadedModsDir: string;
   library: ModLibrary;
   sets: ModSets;
   /** `mods.json`: the only record of which jar belongs to which workshop id. */
@@ -59,7 +61,7 @@ export interface MigrationOptions {
 }
 
 export async function migrateModSets(options: MigrationOptions): Promise<MigrationSummary> {
-  const { modsDir, worldsDir, library, sets, registry, workshopItemDir } = options;
+  const { modsDir, worldsDir, unloadedModsDir, library, sets, registry, workshopItemDir } = options;
   const log = options.log ?? ((line: string) => console.log(line));
   const summary: MigrationSummary = { adopted: [], recovered: [], seeded: [], skipped: [] };
 
@@ -78,13 +80,15 @@ export async function migrateModSets(options: MigrationOptions): Promise<Migrati
     } catch (e) {
       // Tolerated rather than fatal: this runs at boot, and refusing to start
       // the daemon over one stray file in the mods folder helps nobody. It is
-      // reported, and the first start of a world will refuse anyway rather than
-      // launch a folder holding something nothing can account for.
-      summary.skipped.push(`${path}: ${(e as Error).message}`);
-      log(
-        `Mod library migration skipped ${path}: ${(e as Error).message}` +
-          (e instanceof NotAModJarError ? " No world set can name it." : ""),
-      );
+      // moved to the unloaded-mods dir so the folder stays clean.
+      const reason = `${(e as Error).message}${e instanceof NotAModJarError ? " No world set can name it." : ""}`;
+      summary.skipped.push(`${path}: ${reason}`);
+      log(`Mod library migration skipped ${path}: ${reason}`);
+      try {
+        await unloadJar(jar, modsDir, unloadedModsDir, reason);
+      } catch {
+        // Best-effort: if the move fails, the jar stays where it is.
+      }
       continue;
     }
     if (!installed.includes(id)) installed.push(id);

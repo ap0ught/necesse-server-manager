@@ -91,6 +91,7 @@ export interface DaemonConfig {
   modLibraryDir: string;
   modLibraryFile: string;
   modSetsFile: string;
+  unloadedModsDir: string;
   /**
    * Largest jar POST /api/mods/upload will accept, in bytes. Real mods run to a
    * few megabytes; the limit exists so an unauthenticated LAN endpoint cannot be
@@ -288,6 +289,16 @@ export interface ModSet {
   world: string;
   modIds: string[];
   updatedAt: string;
+}
+
+export interface UnloadedMod {
+  jar: string;
+  reason: string;
+}
+
+export interface UnloadedModsResponse {
+  ok: true;
+  mods: UnloadedMod[];
 }
 
 export interface WorldModsResponse {
