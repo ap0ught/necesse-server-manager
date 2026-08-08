@@ -11,10 +11,11 @@ const PS_SAMPLE = [
 ].join("\n") + "\n";
 
 vi.mock("node:child_process", () => ({
-  // promisify appends the callback straight after the caller's args, so the
-  // mock must handle both `(cmd, args, cb)` and `(cmd, args, opts, cb)`.
+  // vi.mock replaces the module, so util.promisify on the mock lacks Node's
+  // custom promisify(execFile) handling. The default promisify expects a
+  // single result argument: cb(null, { stdout, stderr }).
   execFile: vi.fn((...args: unknown[]) => {
-    const cb = args.pop() as (e: Error | null, out?: { stdout: string; stderr: string }) => void;
+    const cb = args.pop() as (e: Error | null, out: { stdout: string; stderr: string }) => void;
     cb(null, { stdout: PS_SAMPLE, stderr: "" });
   }),
 }));
@@ -32,7 +33,7 @@ describe("listJavaProcesses (POSIX branch)", () => {
     const [cmd, args] = execFileMock.mock.calls[0] as unknown as [string, string[]];
     expect(cmd).toBe("ps");
     expect(args).toEqual(["-eo", "pid=,args="]);
-    expect(procs.map((p) => p.pid)).toEqual([114, 2210, 9090]);
+    expect(procs.map((p) => p.pid)).toEqual([114]);
   });
 
   it("keeps the full command line (spaces included) so Server.jar matching can find it", async () => {

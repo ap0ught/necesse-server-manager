@@ -14,12 +14,12 @@ export interface ProcessInfo {
  * command line is not reliably readable via `win32_`), POSIX gives it to us
  * straight from `ps -eo pid=,args=`.
  *
- * @param platform_ Overridable so tests can drive the POSIX branch on any host.
+ * @param platformOverride Overridable so tests can drive the POSIX branch on any host.
  */
 export async function listJavaProcesses(
-  platform_: string = process.platform,
+  platformOverride: NodeJS.Platform = process.platform,
 ): Promise<ProcessInfo[]> {
-  return platform_ === "win32" ? listWindowsJavaProcesses() : listPosixJavaProcesses();
+  return platformOverride === "win32" ? listWindowsJavaProcesses() : listPosixJavaProcesses();
 }
 
 /** Windows: WMI reports `java.exe`/`javaw.exe`, minus the hosts that hide there. */
@@ -45,12 +45,13 @@ async function listWindowsJavaProcesses(): Promise<ProcessInfo[]> {
 /**
  * POSIX: `ps` always carries the full command line, trusted over /proc because
  * it is present on every host this daemon targets (Linux, macOS) and needs no
- * permission. Every java process is captured, whether or not it is the game;
- * `findOrphanServer` does the Server.jar filtering downstream.
+ * permission. Results are filtered to java processes only, matching the
+ * Windows enumerator's contract; `findOrphanServer` does the Server.jar
+ * filtering downstream.
  */
 async function listPosixJavaProcesses(): Promise<ProcessInfo[]> {
   const { stdout } = await run("ps", ["-eo", "pid=,args="]);
-  return parsePsOutput(stdout);
+  return parsePsOutput(stdout).filter((p) => /\bjava\b/.test(p.commandLine));
 }
 
 /**
@@ -62,12 +63,9 @@ async function listPosixJavaProcesses(): Promise<ProcessInfo[]> {
 export function parsePsOutput(stdout: string): ProcessInfo[] {
   const out: ProcessInfo[] = [];
   for (const raw of stdout.split("\n")) {
-    const line = raw.trim();
-    const space = line.indexOf(" ");
-    if (space <= 0) continue; // empty line, or a pid with no command line to match
-    const pid = Number(line.slice(0, space));
-    if (!Number.isFinite(pid)) continue;
-    out.push({ pid, commandLine: line.slice(space + 1).trim() });
+    const match = raw.trim().match(/^(\d+)\s+(.+)$/);
+    if (!match) continue;
+    out.push({ pid: Number(match[1]), commandLine: match[2] });
   }
   return out;
 }
