@@ -290,6 +290,16 @@ export interface ModSet {
   updatedAt: string;
 }
 
+export interface UnloadedMod {
+  jar: string;
+  reason: string;
+}
+
+export interface UnloadedModsResponse {
+  ok: true;
+  mods: UnloadedMod[];
+}
+
 export interface WorldModsResponse {
   ok: true;
   world: string;

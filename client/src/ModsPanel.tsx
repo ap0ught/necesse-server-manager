@@ -6,6 +6,7 @@ import type {
   ModListResponse,
   ModUpdateInfo,
   ModUploadResponse,
+  UnloadedMod,
   WorkshopSearchResponse,
   WorldModsResponse,
 } from "./types";
@@ -66,6 +67,10 @@ export interface ModsPanelProps {
   onUpdateAll: () => void;
   /** Runs GET /api/workshop/search. Absent means the search view is not offered. */
   onSearch?: (q: string, cursor?: string) => Promise<WorkshopSearchResponse>;
+  /** Unloaded/parked mods the daemon could not read. */
+  unloadedMods?: UnloadedMod[] | null;
+  /** Moves a jar back from unloaded to the mods folder. */
+  onEnableMod?: (jar: string) => Promise<void>;
 }
 
 /**
@@ -105,6 +110,8 @@ export function ModsPanel({
   libraryError = null,
   updates = null,
   updatesError = null,
+  unloadedMods,
+  onEnableMod,
   busy,
   running,
   world = null,
@@ -660,6 +667,30 @@ export function ModsPanel({
               </>
             )}
           </div>
+
+          {unloadedMods !== undefined && onEnableMod !== undefined && unloadedMods !== null && unloadedMods.length > 0 && (
+            <div className="mod-add">
+              <h3>Unloaded mods</h3>
+              <p className="hint">
+                These mods could not be read by the daemon and were moved out of the mods folder.
+              </p>
+              <ul className="workshop-list">
+                {unloadedMods.map((m) => (
+                  <li key={m.jar}>
+                    <span className="mod-name">{m.jar}</span>
+                    <span className="workshop-blurb">{m.reason}</span>
+                    <button
+                      type="button"
+                      disabled={locked}
+                      onClick={() => onEnableMod(m.jar)}
+                    >
+                      Move back
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </section>

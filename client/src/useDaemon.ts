@@ -7,6 +7,7 @@ import type {
   ModUpdateInfo,
   PlayerEntry,
   StatusPayload,
+  UnloadedMod,
   WsMessage,
 } from "./types";
 
@@ -63,6 +64,8 @@ export interface DaemonState {
    * would put a red banner over a perfectly working app.
    */
   updatesError: string | null;
+  /** Mods the daemon could not read and moved to the unloaded folder. */
+  unloadedMods: UnloadedMod[] | null;
   console: ConsoleEntry[];
   /**
    * Who is on the server right now, as the daemon last reported.
@@ -124,6 +127,7 @@ export function useDaemon(conn: Connection): DaemonState {
   const [libraryError, setLibraryError] = useState<string | null>(null);
   const [modUpdates, setModUpdates] = useState<ModUpdateInfo[] | null>(null);
   const [updatesError, setUpdatesError] = useState<string | null>(null);
+  const [unloadedMods, setUnloadedMods] = useState<UnloadedMod[] | null>(null);
   const [lines, setLines] = useState<ConsoleEntry[]>([]);
   const [players, setPlayers] = useState<PlayerEntry[]>([]);
   const [connected, setConnected] = useState(false);
@@ -160,6 +164,14 @@ export function useDaemon(conn: Connection): DaemonState {
     // Fired alongside, never awaited into the group below: its rejection is
     // handled inside itself, so it cannot take the other three reads down.
     void readLibrary();
+    void (async () => {
+      try {
+        const r = await api.unloadedMods();
+        setUnloadedMods(r.mods);
+      } catch {
+        setUnloadedMods(null);
+      }
+    })();
     try {
       const [s, w, m] = await Promise.all([api.status(), api.worlds(), api.mods()]);
       setStatus(s);
@@ -368,6 +380,7 @@ export function useDaemon(conn: Connection): DaemonState {
     libraryError,
     modUpdates,
     updatesError,
+    unloadedMods,
     console: lines,
     players,
     connected,

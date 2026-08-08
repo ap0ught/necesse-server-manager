@@ -69,6 +69,7 @@ beforeEach(async () => {
     modLibraryDir: join(root, "mod-library"),
     modLibraryFile: join(root, "mod-library.json"),
     modSetsFile: join(root, "mod-sets.json"),
+    unloadedModsDir: join(root, "unloaded-mods"),
     // Small enough that the oversize case is a few hundred bytes rather than
     // 64MB of test payload.
     modUploadMaxBytes: 4096,
@@ -1463,6 +1464,52 @@ describe("mod library and per-world sets", () => {
         jar: "SummonerExpansion-1.2.0-7.7.jar",
         source: { kind: "local", how: "adopted" },
       });
+    });
+  });
+
+  describe("unloaded mods", () => {
+    it("GET /api/mods/unloaded is empty when nothing has been unloaded", async () => {
+      const res = await app.inject({ method: "GET", url: "/api/mods/unloaded" });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({ ok: true, mods: [] });
+    });
+
+    it("POST /api/mods/unloaded moves a jar out of modsDir and into unloaded-mods", async () => {
+      const bytes = await modJarBytes({ id: "test.unloaded", name: "Unloaded Test" });
+      await writeFile(join(cfg.modsDir, "bad.jar"), bytes);
+
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/mods/unloaded",
+        body: { jar: "bad.jar" },
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().ok).toBe(true);
+      expect(await readdir(cfg.modsDir)).not.toContain("bad.jar");
+      expect(await readdir(cfg.unloadedModsDir)).toContain("bad.jar");
+    });
+
+    it("POST /api/mods/unloaded/:jar/enable moves a jar back to modsDir", async () => {
+      await mkdir(cfg.unloadedModsDir, { recursive: true });
+      await writeFile(join(cfg.unloadedModsDir, "back.jar"), await modJarBytes({ id: "test.back", name: "Back" }));
+
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/mods/unloaded/back.jar/enable",
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().ok).toBe(true);
+      expect(await readdir(cfg.modsDir)).toContain("back.jar");
+      expect(await readdir(cfg.unloadedModsDir)).not.toContain("back.jar");
+    });
+
+    it("refuses a path-traversal jar name", async () => {
+      for (const bad of ["../config.json", "sub/dir.jar", "..\\bad.jar"]) {
+        const res = await app.inject({ method: "POST", url: "/api/mods/unloaded", body: { jar: bad } });
+        expect(res.statusCode, bad).toBe(400);
+      }
     });
   });
 

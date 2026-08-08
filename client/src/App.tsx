@@ -128,6 +128,7 @@ function ConnectedApp({
     libraryError,
     modUpdates,
     updatesError,
+    unloadedMods,
     console: lines,
     players,
     connected,
@@ -480,6 +481,8 @@ function ConnectedApp({
             onSaveSet={libraryError === null ? saveWorldModSet : undefined}
             onUpload={libraryError === null ? uploadMod : undefined}
             onSearch={searchWorkshop}
+            unloadedMods={unloadedMods}
+            onEnableMod={async (jar) => { await api.enableMod(jar); void refresh(); }}
             onAdd={(id, name) => guard(() => api.addMod(id, name))()}
             onRemove={(id) => guard(() => api.removeMod(id))()}
             onUpdateAll={guard(() => api.updateAllMods())}

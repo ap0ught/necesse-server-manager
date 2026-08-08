@@ -24,6 +24,7 @@ const migrate = (): ReturnType<typeof migrateModSets> =>
   migrateModSets({
     modsDir,
     worldsDir,
+    unloadedModsDir: join(root, "unloaded-mods"),
     library,
     sets,
     registry,

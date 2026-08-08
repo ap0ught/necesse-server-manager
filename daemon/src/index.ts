@@ -138,6 +138,7 @@ try {
   await migrateModSets({
     modsDir: cfg.modsDir,
     worldsDir: cfg.worldsDir,
+    unloadedModsDir: cfg.unloadedModsDir,
     library,
     sets,
     registry,

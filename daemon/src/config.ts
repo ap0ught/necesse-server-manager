@@ -29,6 +29,7 @@ export const DEFAULT_CONFIG: DaemonConfig = {
   modLibraryDir: "",
   modLibraryFile: "",
   modSetsFile: "",
+  unloadedModsDir: "",
   modUploadMaxBytes: 64 * 1024 * 1024,
   jvmArgs: [
     "-XX:+UnlockExperimentalVMOptions",
@@ -74,7 +75,7 @@ function stripBom(text: string): string {
  */
 export type StoredConfig = Omit<
   DaemonConfig,
-  "modsDir" | "worldsDir" | "modLibraryDir" | "modLibraryFile" | "modSetsFile"
+  "modsDir" | "worldsDir" | "modLibraryDir" | "modLibraryFile" | "modSetsFile" | "unloadedModsDir"
 >;
 
 /**
@@ -86,12 +87,13 @@ export type StoredConfig = Omit<
  */
 export function stateDerivedPaths(): Pick<
   DaemonConfig,
-  "modLibraryDir" | "modLibraryFile" | "modSetsFile"
+  "modLibraryDir" | "modLibraryFile" | "modSetsFile" | "unloadedModsDir"
 > {
   return {
     modLibraryDir: stateFile("mod-library"),
     modLibraryFile: stateFile("mod-library.json"),
     modSetsFile: stateFile("mod-sets.json"),
+    unloadedModsDir: stateFile("unloaded-mods"),
   };
 }
 
@@ -148,6 +150,7 @@ export async function saveConfig(file: string, cfg: DaemonConfig): Promise<void>
     modLibraryDir: _ld,
     modLibraryFile: _lf,
     modSetsFile: _sf,
+    unloadedModsDir: _um,
     ...stored
   } = cfg;
   await writeFile(file, JSON.stringify(stored satisfies StoredConfig, null, 2), "utf8");

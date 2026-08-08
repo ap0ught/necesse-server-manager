@@ -9,6 +9,7 @@ import type {
   PlayerEntry,
   ReconcileResponse,
   StatusPayload,
+  UnloadedModsResponse,
   WorkshopSearchResponse,
   WorldInfo,
   WorldModsResponse,
@@ -249,6 +250,9 @@ export function makeApi(base: string, token: string) {
      * given. The response carries the field list too, so the form is built from
      * the daemon's schema rather than a second copy kept in step by hand.
      */
+    unloadedMods: () => get<UnloadedModsResponse>("/api/mods/unloaded"),
+    unloadMod: (jar: string) => post<{ ok: true; jar: string }>("/api/mods/unloaded", { jar }),
+    enableMod: (jar: string) => post<{ ok: true; jar: string }>(`/api/mods/unloaded/${encodeURIComponent(jar)}/enable`),
     launchOptions: (world?: string) =>
       request<LaunchOptionsResponse>(
         world === undefined
