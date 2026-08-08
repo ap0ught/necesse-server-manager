@@ -343,7 +343,7 @@ describe("WorkshopSearch", () => {
 
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByText(/^adds a much larger storage chest and a sorting upgrade\.$/i)).toBeTruthy();
-    expect(screen.getByText("29,581")).toBeTruthy(); // exact subscriber count
+    expect(screen.getByText(ultraStorage.subscriptions.toLocaleString())).toBeTruthy(); // exact subscriber count
     expect(screen.getByText("3397986280")).toBeTruthy(); // workshop id
     expect(screen.getByText("2025-11-22")).toBeTruthy(); // updated
     expect(screen.getByText("329 KB")).toBeTruthy(); // size
@@ -376,6 +376,8 @@ describe("WorkshopSearch", () => {
       "_blank",
       "noopener,noreferrer",
     );
+
+    open.mockRestore();
   });
 
   it("expands rows independently and lets Install keep working on an expanded row", async () => {
