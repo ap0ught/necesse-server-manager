@@ -1275,6 +1275,7 @@ describe("GET /api/workshop/search", () => {
       subscriptions: 4242,
       fileSize: 0,
       updatedAt: new Date(1_700_000_000 * 1000).toISOString(),
+      createdAt: null,
     });
     const sent = new URL(net.calls[0].url);
     expect(sent.searchParams.get("search_text")).toBe("torch");

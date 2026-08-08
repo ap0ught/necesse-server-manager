@@ -105,13 +105,22 @@ describe("getDetails", () => {
     expect(body.get("publishedfileids[1]")).toBe("222");
   });
 
-  it("flattens time_updated into ISO and keeps the fields a UI needs", async () => {
+  it("flattens time_updated and time_created into ISO and keeps the fields a UI needs", async () => {
     net.respondJson(
-      detailsBody([{ id: "111", title: "Safe Haven QOL", timeUpdated: 1_700_000_000, subscriptions: 42 }]),
+      detailsBody([
+        {
+          id: "111",
+          title: "Safe Haven QOL",
+          timeUpdated: 1_700_000_000,
+          timeCreated: 1_600_000_000,
+          subscriptions: 42,
+        },
+      ]),
     );
     const [item] = await workshop.getDetails(["111"]);
     expect(item).toMatchObject({ id: "111", title: "Safe Haven QOL", subscriptions: 42 });
     expect(item.updatedAt).toBe(new Date(1_700_000_000 * 1000).toISOString());
+    expect(item.createdAt).toBe(new Date(1_600_000_000 * 1000).toISOString());
     expect(item.previewUrl).toMatch(/^https:/);
   });
 
@@ -169,9 +178,10 @@ describe("getDetails", () => {
   });
 
   it("reports null rather than the unix epoch when Steam sent no timestamp", async () => {
-    net.respondJson(detailsBody([{ id: "111", timeUpdated: 0 }]));
+    net.respondJson(detailsBody([{ id: "111", timeUpdated: 0, timeCreated: 0 }]));
     const [item] = await workshop.getDetails(["111"]);
     expect(item.updatedAt).toBeNull();
+    expect(item.createdAt).toBeNull();
   });
 
   it("makes no request at all for an empty id list", async () => {

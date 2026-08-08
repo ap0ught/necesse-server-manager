@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { WorkshopItem, WorkshopSearchResponse } from "./types";
 
 export interface WorkshopSearchProps {
@@ -38,6 +38,59 @@ function formatSubs(n: number): string {
 }
 
 /**
+ * Client-side reordering of the results already fetched. Deliberately NOT a
+ * page-scoped resort: a "Load more" appends the next batch in Steam's order,
+ * so an explicit sort applies only to what is on screen, and items that
+ * Steam ranked onto later pages are not pulled forward. That is the stated
+ * trade-off of the client-side sort - the daemon's server-side query_type
+ * sort is the correct way to get a fully ordered result set.
+ */
+export type WorkshopSort = "relevance" | "updated" | "created" | "installs";
+
+export const WORKSHOP_SORTS: ReadonlyArray<{ key: WorkshopSort; label: string }> = [
+  { key: "relevance", label: "Relevance" },
+  { key: "updated", label: "Date updated" },
+  { key: "created", label: "Date created" },
+  { key: "installs", label: "Installs" },
+];
+
+/**
+ * Descending dates with an unknown date sorting last. `-byDate(x, y)` would
+ * flip the nulls to the front (an unknown date would pose as the newest), so
+ * a descending sort gets its own arithmetic rather than a negation of an
+ * ascending one.
+ */
+function byDateDesc(a: string | null, b: string | null): number {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return a < b ? 1 : a > b ? -1 : 0;
+}
+
+/**
+ * Returns a NEW array so React state (items) is never mutated in place.
+ * "relevance" is the identity: whatever order Steam returned, including after
+ * a "Load more" append.
+ */
+export function sortWorkshopItems(items: WorkshopItem[], sort: WorkshopSort): WorkshopItem[] {
+  if (sort === "relevance") return [...items];
+  const out = [...items];
+  out.sort((x, y) => {
+    switch (sort) {
+      case "updated":
+        return byDateDesc(x.updatedAt, y.updatedAt);
+      case "created":
+        return byDateDesc(x.createdAt, y.createdAt);
+      case "installs":
+        return y.subscriptions - x.subscriptions;
+      default:
+        return sort satisfies never, 0;
+    }
+  });
+  return out;
+}
+
+/**
  * Steam's cursor paging walks a result set that can shift between pages, so
  * the same id can legitimately arrive twice. Two rows for one mod would also
  * be two identical React keys.
@@ -73,8 +126,14 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [sort, setSort] = useState<WorkshopSort>("relevance");
 
   const locked = busy || running;
+
+  // Derived on each render (cheap: the list is at most a few pages), so a
+  // change of `sort` or a "Load more" append both reorder correctly. The
+  // state array itself is never mutated - sortWorkshopItems returns a copy.
+  const sortedItems = useMemo(() => sortWorkshopItems(items, sort), [items, sort]);
 
   // Same shape as App's candidate guard: a slow first page can land after the
   // user has already run a second search, and only the newest request may
@@ -146,6 +205,23 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
             second request. The sequence guard above is what makes overlapping
             searches safe, so the button does not have to. */}
         <button type="submit">Search</button>
+        <label className="workshop-sort" htmlFor="workshop-sort">
+          Sort by
+          <select
+            id="workshop-sort"
+            value={sort}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSort(WORKSHOP_SORTS.some((o) => o.key === v) ? (v as WorkshopSort) : "relevance");
+            }}
+          >
+            {WORKSHOP_SORTS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </form>
 
       {error !== null && (
@@ -172,7 +248,7 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
       )}
 
       <ul className="workshop-list">
-        {items.map((item) => {
+        {sortedItems.map((item) => {
           const installed = installedIds.includes(item.id);
           return (
             <li key={item.id} title={rowTitle(item)}>

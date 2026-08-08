@@ -144,6 +144,7 @@ interface RawDetail {
   short_description?: unknown;
   preview_url?: unknown;
   time_updated?: unknown;
+  time_created?: unknown;
   file_size?: unknown;
   subscriptions?: unknown;
   banned?: unknown;
@@ -172,6 +173,8 @@ function toItem(raw: RawDetail): WorkshopItem | null {
   if (raw.banned === true || raw.banned === 1) return null;
   const updated = raw.time_updated;
   const updatedMs = typeof updated === "number" || typeof updated === "string" ? num(updated) : 0;
+  const created = raw.time_created;
+  const createdMs = typeof created === "number" || typeof created === "string" ? num(created) : 0;
   // The short form when Steam sent one, else the full description - which is
   // then cut down to the same size anyway, so a client cannot tell which
   // endpoint it came from or be handed a wall of BBCode by either.
@@ -185,8 +188,10 @@ function toItem(raw: RawDetail): WorkshopItem | null {
     previewUrl: typeof raw.preview_url === "string" ? raw.preview_url : "",
     description,
     // Reported as null rather than the unix epoch when Steam sent no
-    // timestamp, so "we do not know" never reads as "updated in 1970".
+    // timestamp, so "we do not know" never reads as "updated in 1970". The
+    // same rule is applied to the creation stamp.
     updatedAt: updatedMs > 0 ? new Date(updatedMs * 1000).toISOString() : null,
+    createdAt: createdMs > 0 ? new Date(createdMs * 1000).toISOString() : null,
     fileSize: num(raw.file_size),
     subscriptions: num(raw.subscriptions),
   };
