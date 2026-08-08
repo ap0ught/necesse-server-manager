@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { openExternal } from "./openExternal";
 import type { WorkshopItem, WorkshopSearchResponse } from "./types";
 
 export interface WorkshopSearchProps {
@@ -31,10 +32,15 @@ interface NextPage {
   query: string;
 }
 
-/** 29581 -> "30k". The exact figure lives in the row's tooltip. */
+/** 29581 -> "30k". The exact figure lives in the row's tooltip (and the expanded row). */
 function formatSubs(n: number): string {
   if (n < 1000) return String(n);
   return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+}
+
+/** The Steam Workshop page for a workshop item, keyed by its id. */
+function workshopUrl(id: string): string {
+  return `https://steamcommunity.com/sharedfiles/filedetails/?id=${id}`;
 }
 
 /**
@@ -127,6 +133,17 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [sort, setSort] = useState<WorkshopSort>("relevance");
+  // Which rows are pulled open to show their full details. A Set (not one id)
+  // so two rows can be examined side by side.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
+
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const locked = busy || running;
 
@@ -152,6 +169,9 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
     const mine = ++seq.current;
     setLoading(true);
     setSearched(true);
+    // A fresh search replaces the list, so any rows that were expanded no
+    // longer refer to what is on screen; paging keeps them open.
+    if (page === undefined) setExpanded(() => new Set());
     // Cleared as the request goes out, not when it lands: otherwise a 503 or a
     // Steam outage message sits under "Searching..." for the daemon's full
     // 10s timeout, describing a request that is already over.
@@ -250,19 +270,34 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
       <ul className="workshop-list">
         {sortedItems.map((item) => {
           const installed = installedIds.includes(item.id);
+          const open = expanded.has(item.id);
           return (
-            <li key={item.id} title={rowTitle(item)}>
+            <li key={item.id} className={open ? "expanded" : undefined} title={rowTitle(item)}>
               {/* Decorative: the title sits right beside it, so an alt would
                   only make a screen reader say the name twice. */}
               {item.previewUrl.length > 0 && (
                 <img className="workshop-thumb" src={item.previewUrl} alt="" loading="lazy" />
               )}
-              <span className="workshop-text">
-                <span className="mod-name">{item.title}</span>
-                {item.description.length > 0 && (
-                  <span className="workshop-blurb">{item.description}</span>
-                )}
-              </span>
+              {/* The whole title+blurb area is the expand/collapse toggle. The
+                  caret shows the row is interactive; the details it reveals
+                  hold what the old tooltip kept out of reach. */}
+              <button
+                type="button"
+                className="workshop-text"
+                aria-expanded={open}
+                aria-label={open ? `Hide details for ${item.title}` : `Show details for ${item.title}`}
+                onClick={() => toggleExpanded(item.id)}
+              >
+                <span className="workshop-caret" aria-hidden="true">
+                  {open ? "▾" : "▸"}
+                </span>
+                <span className="workshop-text-body">
+                  <span className="mod-name">{item.title}</span>
+                  {!open && item.description.length > 0 && (
+                    <span className="workshop-blurb">{item.description}</span>
+                  )}
+                </span>
+              </button>
               <span className="workshop-subs" title={`${item.subscriptions.toLocaleString()} subscribers`}>
                 {formatSubs(item.subscriptions)}
               </span>
@@ -282,6 +317,38 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
               >
                 {installed ? "Installed" : "Install"}
               </button>
+              {open && (
+                <div className="workshop-details">
+                  {item.description.length > 0 && (
+                    <p className="workshop-desc">{item.description}</p>
+                  )}
+                  <dl className="workshop-meta">
+                    <dt>Subscribers</dt>
+                    <dd>{item.subscriptions.toLocaleString()}</dd>
+                    <dt>Workshop id</dt>
+                    <dd>{item.id}</dd>
+                    {item.updatedAt !== null && (
+                      <>
+                        <dt>Updated</dt>
+                        <dd>{item.updatedAt.slice(0, 10)}</dd>
+                      </>
+                    )}
+                    {item.fileSize > 0 && (
+                      <>
+                        <dt>Size</dt>
+                        <dd>{Math.round(item.fileSize / 1024)} KB</dd>
+                      </>
+                    )}
+                  </dl>
+                  <button
+                    type="button"
+                    className="workshop-link"
+                    onClick={() => openExternal(workshopUrl(item.id))}
+                  >
+                    Open on Steam Workshop
+                  </button>
+                </div>
+              )}
             </li>
           );
         })}

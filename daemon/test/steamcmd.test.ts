@@ -4,7 +4,13 @@ import { makeFakeSpawn } from "./fixtures/fake-spawn.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
 import { dirname, join } from "node:path";
 
-const cfg = { ...DEFAULT_CONFIG, steamcmdExe: "C:\\Users\\testuser\\steam\\steamcmd.exe" };
+const cfg = {
+  ...DEFAULT_CONFIG,
+  steamcmdExe:
+    process.platform === "win32"
+      ? "C:\\Users\\testuser\\steam\\steamcmd.exe"
+      : join("/home", "testuser", "steam", "steamcmd"),
+};
 
 let spawn: ReturnType<typeof makeFakeSpawn>;
 let steam: SteamCmd;
@@ -83,7 +89,7 @@ describe("downloadWorkshopItem", () => {
     };
     const s = new SteamCmd(cfg, failing as never);
     await expect(s.downloadWorkshopItem("1", () => {})).rejects.toThrow(
-      /steamcmd.exe.*ENOENT/s,
+      /steamcmd.*ENOENT/s,
     );
   });
 

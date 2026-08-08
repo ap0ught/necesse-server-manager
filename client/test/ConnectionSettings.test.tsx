@@ -21,6 +21,7 @@ describe("ConnectionSettings", () => {
   it("saves the entered host, port and token", async () => {
     const onSave = vi.fn();
     render(<ConnectionSettings initial={null} onSave={onSave} onCancel={() => {}} />);
+    await userEvent.clear(screen.getByLabelText(/host/i));
     await userEvent.type(screen.getByLabelText(/host/i), "192.168.1.106");
     await userEvent.clear(screen.getByLabelText(/port/i));
     await userEvent.type(screen.getByLabelText(/port/i), "8710");
@@ -29,9 +30,16 @@ describe("ConnectionSettings", () => {
     expect(onSave).toHaveBeenCalledWith({ host: "192.168.1.106", port: 8710, token: "s3cret" });
   });
 
+  it("defaults the host to loopback and the port to 8710 on first run", () => {
+    render(<ConnectionSettings initial={null} onSave={() => {}} onCancel={() => {}} />);
+    expect(screen.getByLabelText(/host/i)).toHaveValue("127.0.0.1");
+    expect(screen.getByLabelText(/port/i)).toHaveValue(8710);
+  });
+
   it("refuses to save an empty host", async () => {
     const onSave = vi.fn();
     render(<ConnectionSettings initial={null} onSave={onSave} onCancel={() => {}} />);
+    await userEvent.clear(screen.getByLabelText(/host/i));
     await userEvent.click(screen.getByRole("button", { name: /^(connect|save)$/i }));
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toHaveTextContent(/host/i);

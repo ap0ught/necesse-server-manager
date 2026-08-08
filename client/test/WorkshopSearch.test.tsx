@@ -328,4 +328,68 @@ describe("WorkshopSearch", () => {
     await waitFor(() => expect(screen.getByText("Portable Storage")).toBeTruthy());
     expect(screen.queryByText("Ultra Storage")).toBeNull();
   });
+
+  it("grows the row on click to reveal the details the tooltip used to hide", async () => {
+    setup();
+    await runSearch("storage");
+    await screen.findByText("Ultra Storage");
+
+    // Collapsed: a disclosure that reads as closed, and no details on screen.
+    const toggle = screen.getByRole("button", { name: /^show details for ultra storage$/i });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("button", { name: /open on steam workshop/i })).toBeNull();
+
+    await userEvent.click(toggle);
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByText(/^adds a much larger storage chest and a sorting upgrade\.$/i)).toBeTruthy();
+    expect(screen.getByText(ultraStorage.subscriptions.toLocaleString())).toBeTruthy(); // exact subscriber count
+    expect(screen.getByText("3397986280")).toBeTruthy(); // workshop id
+    expect(screen.getByText("2025-11-22")).toBeTruthy(); // updated
+    expect(screen.getByText("329 KB")).toBeTruthy(); // size
+  });
+
+  it("collapses a row again on a second click", async () => {
+    setup();
+    await runSearch("storage");
+    await screen.findByText("Ultra Storage");
+
+    const toggle = screen.getByRole("button", { name: /^show details for ultra storage$/i });
+    await userEvent.click(toggle);
+    expect(screen.getByRole("button", { name: /open on steam workshop/i })).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: /^hide details for ultra storage$/i }));
+    expect(screen.queryByRole("button", { name: /open on steam workshop/i })).toBeNull();
+  });
+
+  it("links an expanded mod straight to its Steam Workshop page", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    setup();
+    await runSearch("storage");
+    await screen.findByText("Ultra Storage");
+
+    await userEvent.click(screen.getByRole("button", { name: /^show details for ultra storage$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /open on steam workshop/i }));
+
+    expect(open).toHaveBeenCalledWith(
+      "https://steamcommunity.com/sharedfiles/filedetails/?id=3397986280",
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    open.mockRestore();
+  });
+
+  it("expands rows independently and lets Install keep working on an expanded row", async () => {
+    const props = setup();
+    await runSearch("storage");
+    await screen.findByText("Ultra Storage");
+
+    await userEvent.click(screen.getByRole("button", { name: /^show details for ultra storage$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^show details for portable storage$/i }));
+    expect(screen.getAllByRole("button", { name: /open on steam workshop/i })).toHaveLength(2);
+
+    await userEvent.click(screen.getByRole("button", { name: /install ultra storage/i }));
+    expect(props.onInstall).toHaveBeenCalledWith("3397986280");
+  });
 });

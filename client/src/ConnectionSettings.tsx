@@ -16,6 +16,7 @@ export interface ConnectionSettingsProps {
   onCancel: () => void;
 }
 
+const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = "8710";
 
 /**
@@ -44,7 +45,7 @@ export function ConnectionSettings({
   onSave,
   onCancel,
 }: ConnectionSettingsProps) {
-  const [host, setHost] = useState(initial?.host ?? "");
+  const [host, setHost] = useState(initial?.host ?? DEFAULT_HOST);
   const [port, setPort] = useState(initial ? String(initial.port) : DEFAULT_PORT);
   // An empty token is a valid, supported configuration - it means the daemon
   // was set up with authentication disabled - so it is never treated as an
