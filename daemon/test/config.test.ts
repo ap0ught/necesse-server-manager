@@ -160,7 +160,13 @@ describe("configProblems", () => {
     expect(problems.some((p) => p.key === "serverJar" && p.fatal)).toBe(true);
   });
 
-  it("warns rather than refuses when steamcmd is missing", async () => {
+  it("stays quiet when steamcmd is intentionally left blank", async () => {
+    const problems = await configProblems({ ...makeTestConfig(root), steamcmdExe: "" }, {});
+    expect(problems.some((p) => p.key === "steamcmdExe")).toBe(false);
+    expect(fatalProblems(problems)).toEqual([]);
+  });
+
+  it("warns rather than refuses when steamcmd is configured but missing", async () => {
     const cfg = { ...makeTestConfig(root), steamcmdExe: join(root, "nope", "steamcmd.exe") };
     const problems = await configProblems(cfg, {});
     const steam = problems.find((p) => p.key === "steamcmdExe");
@@ -240,15 +246,7 @@ describe("resolveBootConfig", () => {
     }
   });
 
-  /**
-   * The non-fatal half of `configProblems` has exactly one carrier: the
-   * `problems.filter(...).map(...)` that becomes `configWarnings`. Replacing
-   * that expression with `[]` left the whole daemon suite green, because every
-   * other test of it calls `configProblems` directly and never looks at what
-   * `resolveBootConfig` does with the result. "steamcmd was not found" reaching
-   * the operator depends on that one line, so it is asserted here.
-   */
-  it("resolves ok but carries the steamcmd warning through to the caller", async () => {
+  it("resolves ok but carries a steamcmd warning through when a path is configured and missing", async () => {
     const cfg = { ...makeTestConfig(root), steamcmdExe: join(root, "nope", "steamcmd.exe") };
     await saveConfig(join(root, "config.json"), cfg);
 
@@ -258,6 +256,18 @@ describe("resolveBootConfig", () => {
     if (result.ok) {
       expect(result.configWarnings.some((w) => w.includes("steamcmdExe"))).toBe(true);
       expect(result.configWarnings.some((w) => w.includes(cfg.steamcmdExe))).toBe(true);
+    }
+  });
+
+  it("resolves ok with no warning when steamcmd is intentionally left blank", async () => {
+    const cfg = { ...makeTestConfig(root), steamcmdExe: "" };
+    await saveConfig(join(root, "config.json"), cfg);
+
+    const result = await resolveBootConfig(root);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.configWarnings).toEqual([]);
     }
   });
 });

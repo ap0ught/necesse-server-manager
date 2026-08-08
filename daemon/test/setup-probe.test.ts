@@ -43,18 +43,19 @@ describe("probeConfig", () => {
 
   it("finds the server root by the jar inside it, and prefers the bundled jre", async () => {
     const root = "C:\\necesseserver";
+    const exeSuffix = process.platform === "win32" ? ".exe" : "";
     const r = await probeConfig({
       pathDirs: ["C:\\Windows\\System32"],
       extraServerRoots: [root],
       exists: fsWith([
         join(root, "Server.jar"),
-        join(root, "jre", "bin", "java.exe"),
-        "C:\\Windows\\System32\\java.exe",
+        join(root, "jre", "bin", `java${exeSuffix}`),
+        join("C:\\Windows\\System32", `java${exeSuffix}`),
       ]),
     });
     expect(r.serverRoot).toBe(root);
     expect(r.serverJar).toBe(join(root, "Server.jar"));
-    expect(r.javaExe).toBe(join(root, "jre", "bin", "java.exe"));
+    expect(r.javaExe).toBe(join(root, "jre", "bin", `java${exeSuffix}`));
   });
 
   it("reports no server root when the candidate jar is not actually there", async () => {
@@ -70,9 +71,11 @@ describe("probeConfig", () => {
 
   it("falls back to java on PATH when the server ships no jre", async () => {
     const root = "C:\\necesseserver";
-    const onPath = "C:\\Java\\bin\\java.exe";
+    const javaDir = "C:\\Java\\bin";
+    const exeSuffix = process.platform === "win32" ? ".exe" : "";
+    const onPath = join(javaDir, `java${exeSuffix}`);
     const r = await probeConfig({
-      pathDirs: ["C:\\Java\\bin"],
+      pathDirs: [javaDir],
       extraServerRoots: [root],
       exists: fsWith([join(root, "Server.jar"), onPath]),
     });
@@ -90,12 +93,15 @@ describe("probeConfig", () => {
   });
 
   it("finds steamcmd on PATH", async () => {
+    const steamDir = "C:\\steamcmd";
+    const exeSuffix = process.platform === "win32" ? ".exe" : "";
+    const onPath = join(steamDir, `steamcmd${exeSuffix}`);
     const r = await probeConfig({
-      pathDirs: ["C:\\steamcmd"],
+      pathDirs: [steamDir],
       extraServerRoots: [],
-      exists: fsWith(["C:\\steamcmd\\steamcmd.exe"]),
+      exists: fsWith([onPath]),
     });
-    expect(r.steamcmdExe).toBe("C:\\steamcmd\\steamcmd.exe");
+    expect(r.steamcmdExe).toBe(onPath);
   });
 
   it("reports no steamcmd when the PATH candidate is not actually there", async () => {
@@ -108,9 +114,11 @@ describe("probeConfig", () => {
   });
 
   it("finds steamcmd under the user profile when it is not on PATH", async () => {
-    const p = "C:\\Users\\someone\\steam\\steamcmd.exe";
+    const up = "C:\\Users\\someone";
+    const exeSuffix = process.platform === "win32" ? ".exe" : "";
+    const p = join(up, "steam", `steamcmd${exeSuffix}`);
     const r = await probeConfig({
-      userProfile: "C:\\Users\\someone",
+      userProfile: up,
       pathDirs: [],
       extraServerRoots: [],
       exists: fsWith([p]),

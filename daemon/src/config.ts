@@ -212,6 +212,10 @@ export async function configProblems(
   for (const { key, label, fatal } of REQUIRED_PATHS) {
     const value = cfg[key] as string;
     if (value.trim().length === 0) {
+      // steamcmd is optional: a blank path means "do not use it", not
+      // "misconfigured". The daemon only needs it for Workshop installs and
+      // server updates, so basic start/stop/world management should stay quiet.
+      if (key === "steamcmdExe") continue;
       problems.push({
         key,
         fatal,

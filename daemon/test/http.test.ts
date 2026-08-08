@@ -58,6 +58,7 @@ beforeEach(async () => {
     ...DEFAULT_CONFIG,
     modsDir,
     worldsDir,
+    steamcmdExe: process.platform === "win32" ? "C:\\steamcmd\\steamcmd.exe" : join(root, "steamcmd"),
     stopTimeoutMs: 50,
     // Every path the library and the sets write to lives in this test's own
     // temp dir. DEFAULT_CONFIG leaves all three empty - they are derived from

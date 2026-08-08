@@ -929,6 +929,9 @@ export function buildServer(deps: Deps): FastifyInstance {
   });
 
   app.post("/api/server/update", async (_req, reply) => {
+    if (cfg.steamcmdExe.trim().length === 0) {
+      return reply.code(409).send({ ok: false, error: "steamcmd is not configured. Set steamcmdExe in config.json." });
+    }
     if (!requireStopped(reply)) {
       return reply.send({
         ok: false,

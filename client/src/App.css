@@ -123,20 +123,44 @@ button.danger { background: #5a2020; border-color: #7a2a2a; }
 }
 
 /* Search results follow the mod list's one-row-per-mod rule: thumbnail, title,
-   subscriber count, Install. Everything else is in the row's title. */
+   subscriber count, Install. The title row is a disclosure: clicking it grows
+   the row to reveal the full description, a meta block, and a link to the
+   mod's Steam Workshop page. */
 .workshop-form { display: grid; grid-template-columns: auto 1fr; gap: .4rem; align-items: center; margin-bottom: .6rem; }
 .workshop-form label { font-size: .85rem; }
 .workshop-form input { background: #1f242a; color: inherit; border: 1px solid #2b3138; border-radius: 4px; padding: .35rem .5rem; min-width: 0; }
 .workshop-form button { grid-column: 1 / span 2; }
 .workshop-list { list-style: none; padding: 0; margin: .4rem 0 0; }
-.workshop-list li { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; border-bottom: 1px solid #23282e; }
+/* flex-wrap lets an expanded row's details sit on its own full-width line. */
+.workshop-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .5rem; padding: .3rem 0; border-bottom: 1px solid #23282e; }
 /* Fixed box so a thumbnail that fails to load cannot reflow the row. */
 .workshop-thumb { flex: 0 0 32px; width: 32px; height: 32px; object-fit: cover; border-radius: 3px; background: #1f242a; }
-/* Title over blurb, both clamped to one line each, so a result row is a fixed
-   two lines however long the description is. */
-.workshop-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+/* Title over blurb, both clamped to one line each, so a collapsed result row
+   is a fixed two lines however long the description is. This is a disclosure
+   button, so it resets a button's chrome back to how the span looked. */
+.workshop-text {
+  flex: 1 1 auto; min-width: 0; text-align: left;
+  display: flex; align-items: flex-start; gap: .3rem;
+  background: none; border: 0; padding: 0; margin: 0;
+  color: inherit; font: inherit; cursor: pointer; border-radius: 3px;
+}
+.workshop-text:focus-visible { outline: 1px solid #5a8fd4; outline-offset: 2px; }
+.workshop-caret { flex: 0 0 auto; line-height: 1.4; color: #7c8794; }
+.workshop-text-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
 .workshop-blurb { font-size: .72rem; color: #9aa6b2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .workshop-subs { flex: 0 0 auto; font-size: .75rem; color: #9aa6b2; }
+/* The expanded block wraps onto its own line and is indented to line up under
+   the title past the 32px thumbnail. */
+.workshop-details { flex-basis: 100%; padding: .4rem 0 .2rem 40px; }
+.workshop-desc { margin: 0 0 .4rem; font-size: .8rem; line-height: 1.4; color: #c8d0d8; white-space: pre-wrap; }
+.workshop-meta { display: grid; grid-template-columns: auto 1fr; column-gap: .5rem; row-gap: .1rem; margin: 0 0 .45rem; font-size: .75rem; }
+.workshop-meta dt { color: #7c8794; }
+.workshop-meta dd { margin: 0; color: #9aa6b2; }
+.workshop-link {
+  background: none; border: 0; padding: 0; font: inherit; font-size: .8rem;
+  color: #7fb2f0; text-decoration: underline; cursor: pointer;
+}
+.workshop-link:hover { color: #a6ccff; }
 .workshop-more { margin-top: .6rem; width: 100%; }
 /* min-height:0 so the scrolling body is bounded by the grid row rather than
    growing the row to fit every line. */

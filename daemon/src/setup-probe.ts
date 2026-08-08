@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import { access } from "node:fs/promises";
 import { join } from "node:path";
 
+const EXE = process.platform === "win32" ? ".exe" : "";
+
 export interface ProbeEnv {
   appData?: string;
   userProfile?: string;
@@ -67,18 +69,16 @@ export async function probeConfig(env: ProbeEnv): Promise<Probed> {
     }
   }
 
-  // The bundled jre first: it is the JVM the server ships and was tested with,
-  // and a PATH java may be any version at all.
   const javaCandidates = [
-    ...(serverRoot === null ? [] : [join(serverRoot, "jre", "bin", "java.exe")]),
-    ...env.pathDirs.map((d) => join(d, "java.exe")),
+    ...(serverRoot === null ? [] : [join(serverRoot, "jre", "bin", `java${EXE}`)]),
+    ...env.pathDirs.map((d) => join(d, `java${EXE}`)),
   ];
   const javaExe = await firstExisting(javaCandidates, env.exists);
 
   const steamCandidates = [
-    ...env.pathDirs.map((d) => join(d, "steamcmd.exe")),
-    "C:\\steamcmd\\steamcmd.exe",
-    ...(env.userProfile === undefined ? [] : [join(env.userProfile, "steam", "steamcmd.exe")]),
+    ...env.pathDirs.map((d) => join(d, `steamcmd${EXE}`)),
+    ...(process.platform === "win32" ? ["C:\\steamcmd\\steamcmd.exe"] : []),
+    ...(env.userProfile === undefined ? [] : [join(env.userProfile, "steam", `steamcmd${EXE}`)]),
   ];
   const steamcmdExe = await firstExisting(steamCandidates, env.exists);
 
