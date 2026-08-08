@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ConsoleEntry } from "./useDaemon";
+import { stripAnsi } from "./ansi";
 
 const FOLLOW_THRESHOLD_PX = 24;
 
@@ -23,7 +24,7 @@ export function ConsolePanel({ lines }: { lines: ConsoleEntry[] }) {
       >
         {lines.map((l, i) => (
           <div key={i} className={l.kind === "task" ? "line line-task" : "line"}>
-            {l.line}
+            {stripAnsi(l.line)}
           </div>
         ))}
       </div>

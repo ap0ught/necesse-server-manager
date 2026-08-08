@@ -47,4 +47,21 @@ describe("ConsolePanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /jump to latest/i }));
     expect(screen.queryByRole("button", { name: /jump to latest/i })).toBeNull();
   });
+
+  it("strips ANSI escapes SteamCMD emits so lines read as plain text", () => {
+    render(
+      <ConsolePanel
+        lines={[
+          { line: "\u001b[0mIPC function call IClientUtils::GetSteamRealm took too long: 48 msec", ts: "", kind: "task" },
+          { line: "\u001b[32mgreen\u001b[0m ok", ts: "", kind: "task" },
+          { line: "\u001b[0mWaiting for user info...\u001b[0mOK", ts: "", kind: "server" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("IPC function call IClientUtils::GetSteamRealm took too long: 48 msec")).toBeTruthy();
+    expect(screen.getByText("green ok")).toBeTruthy();
+    expect(screen.getByText("Waiting for user info...OK")).toBeTruthy();
+    // No raw ESC bytes or CSI leftovers anywhere in the rendered output.
+    expect(screen.queryByText(/\u001b|\[0m/)).toBeNull();
+  });
 });
