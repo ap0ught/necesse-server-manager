@@ -86,8 +86,8 @@ export async function migrateModSets(options: MigrationOptions): Promise<Migrati
       log(`Mod library migration skipped ${path}: ${reason}`);
       try {
         await unloadJar(jar, modsDir, unloadedModsDir, reason);
-      } catch {
-        // Best-effort: if the move fails, the jar stays where it is.
+      } catch (e) {
+        log(`Failed to move ${jar} to unloaded-mods: ${(e as Error).message}. It stays in the mods folder.`);
       }
       continue;
     }

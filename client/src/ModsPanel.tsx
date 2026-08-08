@@ -71,8 +71,6 @@ export interface ModsPanelProps {
   unloadedMods?: UnloadedMod[] | null;
   /** Moves a jar back from unloaded to the mods folder. */
   onEnableMod?: (jar: string) => Promise<void>;
-  /** Moves a jar from the mods folder to unloaded. */
-  onUnloadMod?: (jar: string) => Promise<void>;
 }
 
 /**

@@ -1175,8 +1175,11 @@ export function buildServer(deps: Deps): FastifyInstance {
 
   app.post("/api/mods/unloaded", async (req, reply) => {
     const { jar } = (req.body ?? {}) as { jar?: string };
-    if (typeof jar !== "string" || jar.length === 0) {
-      return reply.code(400).send({ ok: false, error: "A jar filename is required." });
+    if (typeof jar !== "string" || jar.includes("/") || jar.includes("\\") || !jar.toLowerCase().endsWith(".jar")) {
+      return reply.code(400).send({ ok: false, error: "A bare .jar filename is required." });
+    }
+    if (!requireStopped(reply)) {
+      return reply.send({ ok: false, error: `Cannot change mods while the server is ${pm.status.state}. Stop it first.` });
     }
     if (!requireNoActiveTask(reply, "unload a mod")) return reply;
     const path = join(cfg.modsDir, jar);
@@ -1197,9 +1200,13 @@ export function buildServer(deps: Deps): FastifyInstance {
 
   app.post("/api/mods/unloaded/:jar/enable", async (req, reply) => {
     const { jar } = req.params as { jar: string };
-    if (typeof jar !== "string" || jar.length === 0) {
-      return reply.code(400).send({ ok: false, error: "A jar filename is required." });
+    if (typeof jar !== "string" || jar.includes("/") || jar.includes("\\") || !jar.toLowerCase().endsWith(".jar")) {
+      return reply.code(400).send({ ok: false, error: "A bare .jar filename is required." });
     }
+    if (!requireStopped(reply)) {
+      return reply.send({ ok: false, error: `Cannot change mods while the server is ${pm.status.state}. Stop it first.` });
+    }
+    if (!requireNoActiveTask(reply, "enable a mod")) return reply;
     try {
       await enableJar(jar, cfg.modsDir, cfg.unloadedModsDir);
       return { ok: true, jar } as const;

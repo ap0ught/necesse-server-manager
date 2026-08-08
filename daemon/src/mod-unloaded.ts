@@ -18,7 +18,9 @@ export async function listUnloaded(dir: string): Promise<UnloadedMod[]> {
       try {
         reason = await readFile(reasonFile, "utf8");
         reason = reason.trim();
-      } catch {}
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+      }
       mods.push({ jar: entry.name, reason });
     }
     return mods.sort((a, b) => a.jar.localeCompare(b.jar));
@@ -49,5 +51,7 @@ export async function enableJar(
   const src = join(unloadedDir, jarFilename);
   const dst = join(modsDir, jarFilename);
   await rename(src, dst);
-  await unlink(`${src}.reason`).catch(() => {});
+  await unlink(`${src}.reason`).catch((e) => {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+  });
 }
