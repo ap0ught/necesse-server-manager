@@ -73,7 +73,7 @@ function byDateDesc(a: string | null, b: string | null): number {
  * a "Load more" append.
  */
 export function sortWorkshopItems(items: WorkshopItem[], sort: WorkshopSort): WorkshopItem[] {
-  if (sort === "relevance") return items;
+  if (sort === "relevance") return [...items];
   const out = [...items];
   out.sort((x, y) => {
     switch (sort) {
@@ -84,7 +84,7 @@ export function sortWorkshopItems(items: WorkshopItem[], sort: WorkshopSort): Wo
       case "installs":
         return y.subscriptions - x.subscriptions;
       default:
-        return 0;
+        return sort satisfies never, 0;
     }
   });
   return out;
@@ -210,7 +210,10 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
           <select
             id="workshop-sort"
             value={sort}
-            onChange={(e) => setSort(e.target.value as WorkshopSort)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setSort(WORKSHOP_SORTS.some((o) => o.key === v) ? (v as WorkshopSort) : "relevance");
+            }}
           >
             {WORKSHOP_SORTS.map((o) => (
               <option key={o.key} value={o.key}>
