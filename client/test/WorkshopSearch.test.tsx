@@ -10,6 +10,7 @@ const ultraStorage = {
   previewUrl: "https://images.steamusercontent.com/ugc/26556371929375720/91BB72.jpg",
   description: "Adds a much larger storage chest and a sorting upgrade.",
   updatedAt: "2025-11-22T10:14:40.000Z",
+  createdAt: "2023-06-15T08:30:00.000Z",
   fileSize: 336628,
   subscriptions: 29581,
 };
@@ -19,6 +20,7 @@ const portableStorage = {
   previewUrl: "",
   description: "",
   updatedAt: null,
+  createdAt: null,
   fileSize: 71586,
   subscriptions: 3173,
 };
@@ -337,7 +339,7 @@ describe("WorkshopSearch", () => {
     // Collapsed: a disclosure that reads as closed, and no details on screen.
     const toggle = screen.getByRole("button", { name: /^show details for ultra storage$/i });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.queryByRole("button", { name: /open on steam workshop/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /open on steam workshop/i })).toBeNull();
 
     await userEvent.click(toggle);
 
@@ -346,6 +348,7 @@ describe("WorkshopSearch", () => {
     expect(screen.getByText(ultraStorage.subscriptions.toLocaleString())).toBeTruthy(); // exact subscriber count
     expect(screen.getByText("3397986280")).toBeTruthy(); // workshop id
     expect(screen.getByText("2025-11-22")).toBeTruthy(); // updated
+    expect(screen.getByText("2023-06-15")).toBeTruthy(); // created
     expect(screen.getByText("329 KB")).toBeTruthy(); // size
   });
 
@@ -356,10 +359,10 @@ describe("WorkshopSearch", () => {
 
     const toggle = screen.getByRole("button", { name: /^show details for ultra storage$/i });
     await userEvent.click(toggle);
-    expect(screen.getByRole("button", { name: /open on steam workshop/i })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /open on steam workshop/i })).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: /^hide details for ultra storage$/i }));
-    expect(screen.queryByRole("button", { name: /open on steam workshop/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /open on steam workshop/i })).toBeNull();
   });
 
   it("links an expanded mod straight to its Steam Workshop page", async () => {
@@ -369,7 +372,9 @@ describe("WorkshopSearch", () => {
     await screen.findByText("Ultra Storage");
 
     await userEvent.click(screen.getByRole("button", { name: /^show details for ultra storage$/i }));
-    await userEvent.click(screen.getByRole("button", { name: /open on steam workshop/i }));
+    const link = screen.getByRole("link", { name: /open on steam workshop/i });
+    expect(link).toHaveAttribute("href", "https://steamcommunity.com/sharedfiles/filedetails/?id=3397986280");
+    await userEvent.click(link);
 
     expect(open).toHaveBeenCalledWith(
       "https://steamcommunity.com/sharedfiles/filedetails/?id=3397986280",
@@ -387,7 +392,7 @@ describe("WorkshopSearch", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^show details for ultra storage$/i }));
     await userEvent.click(screen.getByRole("button", { name: /^show details for portable storage$/i }));
-    expect(screen.getAllByRole("button", { name: /open on steam workshop/i })).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /open on steam workshop/i })).toHaveLength(2);
 
     await userEvent.click(screen.getByRole("button", { name: /install ultra storage/i }));
     expect(props.onInstall).toHaveBeenCalledWith("3397986280");

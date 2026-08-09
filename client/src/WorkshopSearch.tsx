@@ -333,6 +333,12 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
                         <dd>{item.updatedAt.slice(0, 10)}</dd>
                       </>
                     )}
+                    {item.createdAt !== null && (
+                      <>
+                        <dt>Created</dt>
+                        <dd>{item.createdAt.slice(0, 10)}</dd>
+                      </>
+                    )}
                     {item.fileSize > 0 && (
                       <>
                         <dt>Size</dt>
@@ -340,13 +346,18 @@ export function WorkshopSearch({ search, onInstall, busy, running, installedIds 
                       </>
                     )}
                   </dl>
-                  <button
-                    type="button"
+                  <a
                     className="workshop-link"
-                    onClick={() => openExternal(workshopUrl(item.id))}
+                    href={workshopUrl(item.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openExternal(workshopUrl(item.id));
+                    }}
                   >
-                    Open on Steam Workshop
-                  </button>
+                    Open on Steam Workshop &#8599;
+                  </a>
                 </div>
               )}
             </li>
